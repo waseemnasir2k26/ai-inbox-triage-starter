@@ -1,0 +1,327 @@
+{
+  "name": "AI Inbox Triage Starter (drafts-only)",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "simple": false,
+        "filters": {
+          "readStatus": "unread",
+          "q": "in:inbox -category:promotions"
+        },
+        "options": {}
+      },
+      "id": "b1a1c111-1111-4111-8111-111111111111",
+      "name": "Gmail Trigger",
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.2,
+      "position": [-360, 320],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "REPLACE_WITH_YOUR_GMAIL_CRED_ID",
+          "name": "Gmail account (your inbox)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "cfg-1",
+              "name": "LLM_BASE_URL",
+              "value": "https://api.openai.com/v1/chat/completions",
+              "type": "string"
+            },
+            {
+              "id": "cfg-2",
+              "name": "LLM_MODEL",
+              "value": "gpt-4o-mini",
+              "type": "string"
+            },
+            {
+              "id": "cfg-3",
+              "name": "OWNER_NAME",
+              "value": "Alex (Owner)",
+              "type": "string"
+            },
+            {
+              "id": "cfg-4",
+              "name": "BUSINESS_NAME",
+              "value": "Your Business",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "c2b2c222-2222-4222-8222-222222222222",
+      "name": "Config",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [-140, 320]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.LLM_BASE_URL }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"{{ $json.LLM_MODEL }}\",\n  \"temperature\": 0,\n  \"response_format\": { \"type\": \"json_object\" },\n  \"messages\": [\n    { \"role\": \"system\", \"content\": \"You are an inbox triage classifier. Read the email and return STRICT JSON only. Fields: label (one of: urgent, lead, invoice, newsletter, other), request_type (one of: meeting, quote, support, none), confidence (0-1 number), reason (short string), needs_human (boolean true when money, legal, complaint, or anything sensitive is involved). Never invent facts.\" },\n    { \"role\": \"user\", \"content\": \"FROM: {{ $('Gmail Trigger').item.json.from }}\\nSUBJECT: {{ $('Gmail Trigger').item.json.subject }}\\n\\nBODY:\\n{{ ($('Gmail Trigger').item.json.snippet || $('Gmail Trigger').item.json.text || '').toString().slice(0, 1500) }}\" }\n  ]\n}",
+        "options": {}
+      },
+      "id": "d3c3c333-3333-4333-8333-333333333333",
+      "name": "Classify (LLM)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [80, 320],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "REPLACE_WITH_YOUR_LLM_CRED_ID",
+          "name": "LLM API key (Authorization: Bearer ...)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse the LLM JSON response and merge with the original email fields.\nconst email = $('Gmail Trigger').item.json;\nlet parsed = {};\ntry {\n  const raw = $input.item.json;\n  const content = raw.choices && raw.choices[0] && raw.choices[0].message\n    ? raw.choices[0].message.content\n    : (raw.content || '{}');\n  parsed = typeof content === 'string' ? JSON.parse(content) : content;\n} catch (e) {\n  parsed = { label: 'other', request_type: 'none', confidence: 0, reason: 'parse_error', needs_human: true };\n}\n\nconst label = ['urgent', 'lead', 'invoice', 'newsletter', 'other'].includes(parsed.label)\n  ? parsed.label\n  : 'other';\n\nreturn {\n  json: {\n    id: email.id,\n    threadId: email.threadId,\n    from: email.from,\n    subject: email.subject,\n    snippet: email.snippet || '',\n    label,\n    request_type: parsed.request_type || 'none',\n    confidence: Number(parsed.confidence) || 0,\n    reason: parsed.reason || '',\n    needs_human: parsed.needs_human !== false,\n    triaged_at: new Date().toISOString()\n  }\n};"
+      },
+      "id": "e4d4c444-4444-4444-8444-444444444444",
+      "name": "Parse Classification",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [300, 320]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "cond-1",
+              "leftValue": "={{ $json.label }}",
+              "rightValue": "urgent,lead,invoice",
+              "operator": {
+                "type": "string",
+                "operation": "regex"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "f5e5c555-5555-4555-8555-555555555555",
+      "name": "Needs a Draft?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [520, 320]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Config').item.json.LLM_BASE_URL }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"{{ $('Config').item.json.LLM_MODEL }}\",\n  \"temperature\": 0.3,\n  \"messages\": [\n    { \"role\": \"system\", \"content\": \"You draft SHORT, friendly, professional email replies for a small business owner. Write only the reply body (no subject, no signature block beyond a first-name sign-off). Never promise prices, dates, or commitments the owner has not confirmed. If information is missing, ask one clarifying question. This is a DRAFT for a human to review before sending.\" },\n    { \"role\": \"user\", \"content\": \"You are drafting a reply as {{ $('Config').item.json.OWNER_NAME }} from {{ $('Config').item.json.BUSINESS_NAME }}.\\nDetected request type: {{ $json.request_type }} (label: {{ $json.label }}).\\n\\nIncoming email:\\nFROM: {{ $json.from }}\\nSUBJECT: {{ $json.subject }}\\nBODY: {{ $json.snippet }}\\n\\nWrite the reply body now.\" }\n  ]\n}",
+        "options": {}
+      },
+      "id": "a6f6c666-6666-4666-8666-666666666666",
+      "name": "Draft Reply (LLM)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [760, 200],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "REPLACE_WITH_YOUR_LLM_CRED_ID",
+          "name": "LLM API key (Authorization: Bearer ...)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Pull the drafted reply text out of the LLM response.\nconst meta = $('Parse Classification').item.json;\nconst raw = $input.item.json;\nlet body = '';\ntry {\n  body = raw.choices && raw.choices[0] && raw.choices[0].message\n    ? raw.choices[0].message.content\n    : (raw.content || '');\n} catch (e) {\n  body = '';\n}\nreturn {\n  json: {\n    ...meta,\n    draft_body: (body || '').toString().trim()\n  }\n};"
+      },
+      "id": "b7a7c777-7777-4777-8777-777777777777",
+      "name": "Extract Draft Text",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [980, 200]
+    },
+    {
+      "parameters": {
+        "resource": "draft",
+        "subject": "=Re: {{ $json.subject }}",
+        "message": "={{ $json.draft_body }}\n\n-- \n{{ $('Config').item.json.OWNER_NAME }}\n{{ $('Config').item.json.BUSINESS_NAME }}\n\n[AI-drafted by Inbox Triage Starter - review before sending]",
+        "options": {
+          "threadId": "={{ $json.threadId }}",
+          "sendTo": "={{ $json.from }}"
+        }
+      },
+      "id": "c8b8c888-8888-4888-8888-888888888888",
+      "name": "Create Gmail Draft (no send)",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [1200, 200],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "REPLACE_WITH_YOUR_GMAIL_CRED_ID",
+          "name": "Gmail account (your inbox)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Collect every triaged email into one digest string.\n// Runs once per execution over all incoming items.\nconst rows = items.map(i => i.json);\nconst byLabel = {};\nfor (const r of rows) {\n  byLabel[r.label] = byLabel[r.label] || [];\n  byLabel[r.label].push(r);\n}\nconst order = ['urgent', 'lead', 'invoice', 'newsletter', 'other'];\nlet digest = `DAILY INBOX DIGEST - ${new Date().toISOString().slice(0,10)}\\n`;\ndigest += `Total triaged: ${rows.length}\\n`;\ndigest += `Drafts created: ${rows.filter(r => r.draft_body).length}\\n\\n`;\nfor (const label of order) {\n  const group = byLabel[label] || [];\n  if (!group.length) continue;\n  digest += `== ${label.toUpperCase()} (${group.length}) ==\\n`;\n  for (const r of group) {\n    const flag = r.needs_human ? ' [NEEDS HUMAN]' : '';\n    const drafted = r.draft_body ? ' [DRAFT READY]' : '';\n    digest += `- ${r.from} | ${r.subject}${drafted}${flag}\\n  ${r.reason}\\n`;\n  }\n  digest += `\\n`;\n}\nreturn [{ json: { digest, count: rows.length, generated_at: new Date().toISOString() } }];"
+      },
+      "id": "d9c9c999-9999-4999-8999-999999999999",
+      "name": "Build Daily Digest",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [980, 460]
+    },
+    {
+      "parameters": {
+        "content": "## AI Inbox Triage Starter (drafts-only)\n\n1. Gmail Trigger polls for unread mail\n2. LLM classifies: urgent / lead / invoice / newsletter / other\n3. urgent + lead + invoice get an AI **draft** reply\n4. Nothing is auto-sent - a human reviews every draft\n5. A daily digest summarizes everything\n\nSwap the LLM base URL for OpenAI, Groq, or Gemini (OpenAI-compatible).\nDone-for-you version: https://calendly.com/skynetlabs/schedule-a-free-consultation",
+        "height": 260,
+        "width": 380,
+        "color": 4
+      },
+      "id": "eae0caaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "name": "How this works",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [-360, -20]
+    }
+  ],
+  "connections": {
+    "Gmail Trigger": {
+      "main": [
+        [
+          {
+            "node": "Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config": {
+      "main": [
+        [
+          {
+            "node": "Classify (LLM)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Classify (LLM)": {
+      "main": [
+        [
+          {
+            "node": "Parse Classification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Classification": {
+      "main": [
+        [
+          {
+            "node": "Needs a Draft?",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Build Daily Digest",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Needs a Draft?": {
+      "main": [
+        [
+          {
+            "node": "Draft Reply (LLM)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Draft Reply (LLM)": {
+      "main": [
+        [
+          {
+            "node": "Extract Draft Text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Draft Text": {
+      "main": [
+        [
+          {
+            "node": "Create Gmail Draft (no send)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": [
+    {
+      "name": "inbox-triage"
+    }
+  ]
+}

@@ -1,0 +1,166 @@
+{
+  "version": 1,
+  "description": "Editable routing rules for the AI Inbox Triage Starter. The AI uses the labels and signals below to classify each email. Rules are evaluated top to bottom; the first strong match wins. Edit the keywords, senders, and draft settings to fit your business. Nothing here sends email - drafts only.",
+  "labels": ["urgent", "lead", "invoice", "newsletter", "other"],
+  "draftable_labels": ["urgent", "lead", "invoice"],
+  "default_label": "other",
+  "rules": [
+    {
+      "id": 1,
+      "label": "urgent",
+      "when": "The sender explicitly asks for a reply today, uses words like urgent, ASAP, emergency, deadline, or the message is a same-day cancellation or complaint.",
+      "signals": [
+        "urgent",
+        "asap",
+        "emergency",
+        "today",
+        "immediately",
+        "deadline"
+      ],
+      "needs_human": true,
+      "draft": true
+    },
+    {
+      "id": 2,
+      "label": "urgent",
+      "when": "An existing customer reports something broken, a failed payment, or a service outage.",
+      "signals": ["not working", "broken", "outage", "failed", "down", "error"],
+      "needs_human": true,
+      "draft": true
+    },
+    {
+      "id": 3,
+      "label": "lead",
+      "when": "A new person asks about your services, pricing, availability, or wants to book or get a quote.",
+      "signals": [
+        "quote",
+        "pricing",
+        "how much",
+        "availability",
+        "book",
+        "interested in",
+        "enquiry",
+        "inquiry"
+      ],
+      "needs_human": false,
+      "draft": true,
+      "request_type": "quote"
+    },
+    {
+      "id": 4,
+      "label": "lead",
+      "when": "Someone requests a meeting, demo, call, or consultation.",
+      "signals": [
+        "meeting",
+        "call",
+        "demo",
+        "consultation",
+        "schedule",
+        "calendar"
+      ],
+      "needs_human": false,
+      "draft": true,
+      "request_type": "meeting"
+    },
+    {
+      "id": 5,
+      "label": "lead",
+      "when": "A referral or warm introduction from an existing contact.",
+      "signals": ["referred by", "introduction", "connect you", "recommended"],
+      "needs_human": false,
+      "draft": true
+    },
+    {
+      "id": 6,
+      "label": "invoice",
+      "when": "The email is an invoice, bill, receipt, payment request, or a supplier chasing payment.",
+      "signals": [
+        "invoice",
+        "receipt",
+        "payment due",
+        "amount owed",
+        "bill",
+        "statement"
+      ],
+      "needs_human": true,
+      "draft": true
+    },
+    {
+      "id": 7,
+      "label": "invoice",
+      "when": "A customer asks about their own invoice, a refund, or a billing discrepancy.",
+      "signals": ["refund", "overcharged", "billing", "charge", "wrong amount"],
+      "needs_human": true,
+      "draft": true,
+      "request_type": "support"
+    },
+    {
+      "id": 8,
+      "label": "newsletter",
+      "when": "Bulk marketing, product updates, or content digests from companies and tools.",
+      "signals": [
+        "unsubscribe",
+        "newsletter",
+        "weekly digest",
+        "product update",
+        "webinar"
+      ],
+      "needs_human": false,
+      "draft": false
+    },
+    {
+      "id": 9,
+      "label": "newsletter",
+      "when": "Automated no-reply notifications from platforms (social, SaaS, receipts you do not act on).",
+      "signals": ["no-reply", "noreply", "do not reply", "notification"],
+      "needs_human": false,
+      "draft": false
+    },
+    {
+      "id": 10,
+      "label": "other",
+      "when": "Internal team chatter, personal mail, or anything that does not fit the buckets above.",
+      "signals": [],
+      "needs_human": false,
+      "draft": false
+    },
+    {
+      "id": 11,
+      "label": "urgent",
+      "when": "Anything mentioning legal action, a lawyer, a chargeback, or a public review threat - always route to a human.",
+      "signals": [
+        "lawyer",
+        "legal",
+        "chargeback",
+        "dispute",
+        "review",
+        "attorney"
+      ],
+      "needs_human": true,
+      "draft": false
+    },
+    {
+      "id": 12,
+      "label": "other",
+      "when": "When the AI confidence is below 0.5, default to 'other' and flag needs_human so nothing important is silently dropped.",
+      "signals": [],
+      "needs_human": true,
+      "draft": false,
+      "min_confidence": 0.5
+    }
+  ],
+  "draft_guardrails": {
+    "never_promise": [
+      "prices not confirmed by the owner",
+      "delivery dates",
+      "discounts",
+      "legal or medical advice"
+    ],
+    "always": [
+      "stay short and friendly",
+      "ask one clarifying question when info is missing",
+      "sign off with the owner first name only"
+    ],
+    "hard_rule": "Every output is a DRAFT. A human reviews and sends. The workflow contains no send action."
+  }
+}
