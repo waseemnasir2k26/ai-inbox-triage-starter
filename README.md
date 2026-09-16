@@ -12,6 +12,10 @@ Import one [n8n](https://n8n.io) workflow, connect your inbox, add an AI key, an
 
 ---
 
+## Status
+
+Last reviewed: September 2026 · release v2026.09
+
 ## Who this is for
 
 You run a small business, agency, clinic, or shop. Your inbox is the front door — and it is buried. Leads sit unanswered for hours, invoices get lost under newsletters, and the one genuinely urgent email hides on page two. You do not want a bot firing off replies in your name. You want a **sharp assistant that pre-sorts everything and hands you ready-to-review drafts.**
