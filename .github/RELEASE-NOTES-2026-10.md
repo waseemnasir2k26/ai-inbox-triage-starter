@@ -1,0 +1,4 @@
+- Public MIT starter kit that triages an inbox with AI inside n8n and writes reply drafts only, never auto-sending: one importable workflow (`workflows/inbox-triage-starter.n8n.json`), editable rules (`rules/triage-rules.example.json`), `docs/SETUP.md`, `docs/PROMPTS.md` and a CONTRIBUTING guide.
+- October 2026 review: repo tree and README re-read, history checked (no commits since the 2026-09-16 release commit), and all 5 external README links returned HTTP 200. Workflow JSON, rules and prompts were not changed.
+- README Status line moved to v2026.10; the existing booking section now lists the Fiverr and Upwork profiles alongside the Calendly link.
+- Known gaps: no CI or JSON validation for the workflow file, and the workflow has not been re-tested against a newer n8n release than the one it was exported from in August 2026.

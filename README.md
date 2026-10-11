@@ -14,7 +14,7 @@ Import one [n8n](https://n8n.io) workflow, connect your inbox, add an AI key, an
 
 ## Status
 
-Last reviewed: September 2026 · release v2026.09
+Last reviewed: October 2026 · release v2026.10
 
 ## Who this is for
 
@@ -105,6 +105,8 @@ If you would rather have it **built, monitored, and done-for-you on your real in
 
 > One recent client, a Belgian mining-logistics operator, paid in full and renewed on a retainer.
 
-**-> [Book a free systems audit](https://calendly.com/skynetlabs/schedule-a-free-consultation)** — a 30-minute call, no pitch deck, just a look at your inbox and where the time is leaking.
+- Hire on Fiverr: https://www.fiverr.com/agencies/skynetjoellc
+- Hire on Upwork: https://www.upwork.com/freelancers/muhammadwaseemnasir
+- [Book a free systems audit](https://calendly.com/skynetlabs/schedule-a-free-consultation) — a 30-minute call, no pitch deck, just a look at your inbox and where the time is leaking.
 
 Built by **SkynetLabs**. If this saved you an hour, a star helps other overwhelmed owners find it.
